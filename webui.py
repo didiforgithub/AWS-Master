@@ -1,44 +1,72 @@
 import gradio as gr
 import os
 import time
+import get_step
+import pdfqa
+import answer_generator
+
+TEMPLATE = answer_generator.tutorial_template
+
+# part 0 上传文件
 def upload_file(zip_obj):
 
-    SAVE_PATH = "zips/"
-    if not os.path.exists(SAVE_PATH):
-        os.makedirs(SAVE_PATH)
+    ZIP_PATH = "zips/"
+    if not os.path.exists(ZIP_PATH):
+        os.makedirs(ZIP_PATH)
     
     file_name = f"{time.strftime('%Y%m%d%H%M%S')}.zip"
-    file_path = os.path.join(SAVE_PATH, file_name)
+    zip_path = os.path.join(ZIP_PATH, file_name)
 
     try:
-        with open(file_path, 'wb') as f:
+        with open(zip_path, 'wb') as f:
             if not zip_obj:
                 return "No file"
             f.write(zip_obj)
     except Exception as e:
         return f"Error: {str(e)}"
-    return file_path
+    return zip_path
 
-def LS(FILEPATH):
-    with open("/Users/mac/Project/AWS/hello.md", 'r',encoding='utf-8') as f:
-        content = f.read()
+# part 1 获取步骤
+def Get_steps(ZIP_PATH):
 
-    return content
+    # 文件存储路径
+    FILEPATH = "files/"
+    if not os.path.exists(FILEPATH):
+        os.makedirs(FILEPATH)
+        
+    # 为当前解压的文件夹添加唯一名称
+    FOLDER_NAME = f"{time.strftime('%Y%m%d%H%M%S')}"
+    FOLDER_PATH = os.path.join(FILEPATH,FOLDER_NAME)
 
-def LLM_answer(content):
-    result = content
+    get_step.unzip_file(ZIP_PATH, FOLDER_PATH) # 解压文件
+    structure = get_step.parse_dir(FOLDER_PATH) # 生成目录结构
+    steps = get_step.get_steps2deploy(structure) # 生成steps
+
+    return steps,structure
+
+# # part 2 向量检索
+def PDF_QA(Querys):
+    result = pdfqa.query_pdf_folder(queries=Querys, pdf_folder="./data")
+    return result
+# part 3 流式生成
+def LLM_answer(structure,result):
+
+    answer = answer_generator.tutorial_generation_chain({"project_structure": structure, 
+                                        "aws_documentation": result, 
+                                        "tutorial_template": TEMPLATE})
 
     return f'''<div style="border:1px solid black; padding:10px; margin:10px;">
 
-    \n{result}\n
+    \n{answer}\n
 
     '''
 
 def Body(zip_obj):
-    FILEPATH = upload_file(zip_obj)
-    content = LS(FILEPATH)
-    result = LLM_answer(content)
-    return result
+    ZIP_PATH = upload_file(zip_obj)
+    steps = Get_steps(ZIP_PATH)
+    result,structure = PDF_QA(steps)
+    answer = LLM_answer(structure,result)
+    return answer
 
 with gr.Blocks() as demo:
     gr.Markdown("# Welcome to use ZIP Deploy ⚡"),
