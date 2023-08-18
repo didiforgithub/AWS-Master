@@ -4,15 +4,14 @@ import time
 import get_step
 import pdfqa
 import markdown
+import pdfkit
 import answer_generator
 import s3up
-import mdtopdf
-import chat
-import polly2audio
 
 # 全局变量部分
 
 IF_UPlOADFILE = False
+global REPORT
 REPORT = ""
 TEMPLATE = answer_generator.tutorial_template
 
@@ -20,13 +19,6 @@ TEMPLATE = answer_generator.tutorial_template
 def reset_textbox():
     return gr.update(value="")
 
-# LLM answer
-def respond(message, chat_history):
-    bot_message = chat.get_response(message, chat_history)
-    chat_history.append((message, bot_message))
-    return "", chat_history
-
-  
 # body part
 # part 0 上传文件
 def upload_file(zip_obj):
@@ -81,13 +73,12 @@ def LLM_answer(structure,result):
 # 修改body形成chatbot格式
 def Body(zip_obj,history = []):
     try:
-        ZIP_PATH = upload_file(zip_obj)
-        steps,structure = Get_steps(ZIP_PATH)
-        result = PDF_QA(steps)
-        res = str(result)[:4000]
-        answer = LLM_answer(structure,res)
-        # answer = "# hello world"
-        global REPORT 
+        # ZIP_PATH = upload_file(zip_obj)
+        # steps,structure = Get_steps(ZIP_PATH)
+        # result = PDF_QA(steps)
+        # res = str(result)[:4000]
+        # answer = LLM_answer(structure,res)
+        answer = "# hello world"
         REPORT = answer
         history.append(("please show me the Deploy documentation", answer))
         return "",history
@@ -98,12 +89,19 @@ def Body(zip_obj,history = []):
 
 # Download Part
 def Download():
-    md_str = REPORT
-    print(md_str)
-    output_file = "test.pdf"
-    DOWNPATH = mdtopdf.md_to_s3(markdown_text=md_str)
-    return DOWNPATH
+    output_path = "documents/"
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
 
+    html = markdown.markdown(REPORT)
+    file_name = f"{time.strftime('%Y%m%d%H%M%S')}.pdf"
+    print(file_name)
+    print(output_path)
+    PDFPATH = os.path.join(output_path, file_name)
+    pdfkit.from_string(html, PDFPATH)
+    DOWNPATH = s3up.upload_file(PDFPATH)
+
+    return DOWNPATH
 
 # gradio部分
 
@@ -128,16 +126,11 @@ with gr.Blocks() as demo:
                 placeholder= "Download link here")
     gr.Markdown("## QA Part ❓")
     with gr.Row():
-        chatbot = gr.Chatbot([],elem_id="chatbot",height = 500)
+        chatbot = gr.Chatbot([],elem_id="chatbot",height = 300)
     with gr.Row():
-        with gr.Column(scale=0.7):
+        with gr.Column():
             query = gr.Textbox(
                 placeholder="upload the zip file ,and we'll tell you how to deploy it",
-                container= False
-            )
-        with gr.Column(scale=0.3):
-            autoaudio = gr.Button(
-                "🔊",
                 container= False
             )
 
@@ -153,8 +146,8 @@ with gr.Blocks() as demo:
     # 2. 点击download按钮，调用全局变量report作为输入，调用md转PDF函数进行输出
     DownloadBtn.click(Download,outputs = [Link])
     # 3. 点击txtsubmit按钮，调用全局变量History作为输入，需要包含对话格式，调用LLM进行输出
-    query.submit(respond, [query, chatbot], [query, chatbot])
-    
+    query.submit()
+
 demo.queue()
 if __name__ == "__main__":
     demo.queue().launch(share=True)

@@ -3,14 +3,14 @@ from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain import PromptTemplate
 from langchain import LLMChain
 
-# LLM = ChatOpenAI(model_name="gpt-3.5-turbo", 
+# LLM = ChatOpenAI(model_name="gpt-3.5-turbo-16k", 
 #                  openai_api_key="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",
 #                  streaming=True, 
 #                  callbacks=[StreamingStdOutCallbackHandler()],
 #                  temperature=0.7,
 #                 )
 
-LLM = ChatOpenAI(model_name="gpt-3.5-turbo", 
+LLM = ChatOpenAI(model_name="gpt-3.5-turbo-16k", 
                  openai_api_key="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",
                  streaming=False, 
                  callbacks=[StreamingStdOutCallbackHandler()],
