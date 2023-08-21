@@ -61,4 +61,3 @@ def text_to_speech(input_text, voice_id="Joanna"):
     print("audio的网页URL:"+url)
     return url
 
-text_to_speech("thank you for your AWS coupons")

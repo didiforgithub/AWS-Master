@@ -136,6 +136,7 @@ with gr.Blocks() as demo:
                 "🔊",
                 container= False
             )
+    Auto_a = gr.Audio(visible=False,autoplay=True)
 
     # demo设计
     # 1. 首先构建一个基础的LLM回复的代码，理清楚Chatbot触发的逻辑
